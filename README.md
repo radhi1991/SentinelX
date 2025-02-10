@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # API Security Dashboard
 
 A modern web application for monitoring API security, compliance, and PQC readiness.
@@ -48,3 +49,7 @@ src/
 - `npm test`: Launches the test runner
 - `npm run build`: Builds the app for production
 - `npm run eject`: Ejects from Create React App
+=======
+# API-Sentinel
+API Governance &amp; Security Platform
+>>>>>>> 192f66f2304fb053ca60e48cf6d3ba9d669960e2
