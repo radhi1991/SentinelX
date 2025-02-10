@@ -1,0 +1,9 @@
+basePath: /api
+host: localhost:8080
+info:
+  contact: {}
+  description: API for monitoring and managing API security metrics
+  title: API Security Dashboard API
+  version: "1.0"
+paths: {}
+swagger: "2.0"

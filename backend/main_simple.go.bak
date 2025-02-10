@@ -1,0 +1,365 @@
+package main
+
+import (
+	"fmt"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	swagger "github.com/swaggo/gin-swagger"
+	swaggerFiles "github.com/swaggo/files"
+	"net/http"
+	"time"
+)
+
+// @title API Security Dashboard Backend API
+// @version 1.0
+// @description Backend API for the API Security Dashboard
+// @host localhost:8080
+// @BasePath /api
+
+func main() {
+	router := gin.Default()
+
+	// Debug middleware
+	router.Use(func(c *gin.Context) {
+		fmt.Printf("[DEBUG] %s %s\n", c.Request.Method, c.Request.URL.Path)
+		c.Next()
+	})
+
+	// Configure CORS - must be before routes
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * 3600,
+	}))
+
+	// Swagger docs
+	router.GET("/docs/*any", swagger.WrapHandler(swaggerFiles.Handler))
+
+	// API Routes
+	apiGroup := router.Group("/api")
+	{
+		// Activity Timeline
+		apiGroup.GET("/activity/timeline", func(c *gin.Context) {
+			c.JSON(http.StatusOK, gin.H{
+				"data": []gin.H{
+					{"timestamp": time.Now().Add(-1 * time.Hour).Format(time.RFC3339), "event": "API Security Scan", "type": "security"},
+					{"timestamp": time.Now().Add(-2 * time.Hour).Format(time.RFC3339), "event": "Performance Test", "type": "performance"},
+					{"timestamp": time.Now().Add(-3 * time.Hour).Format(time.RFC3339), "event": "Config Update", "type": "config"},
+				},
+			})
+		})
+
+		// Metrics
+		apiGroup.GET("/metrics", func(c *gin.Context) {
+			c.JSON(http.StatusOK, gin.H{
+				"total_apis":        150,
+				"secure_apis":       120,
+				"vulnerable_apis":   30,
+				"compliance_score":  85,
+				"api_calls_24h":     25000,
+				"error_rate":        0.02,
+				"alerts":            15,
+				"critical_alerts":   3,
+				"uptime":            99.99,
+				"avg_response_time": 120,
+				"total_endpoints":   250,
+			})
+		})
+
+		// Performance Metrics
+		apiGroup.GET("/metrics/performance", func(c *gin.Context) {
+			c.JSON(http.StatusOK, gin.H{
+				"metrics": []gin.H{
+					{"name": "Response Time", "value": 120, "unit": "ms", "trend": "-5%"},
+					{"name": "Throughput", "value": 1000, "unit": "req/s", "trend": "+10%"},
+					{"name": "Error Rate", "value": 0.02, "unit": "%", "trend": "-1%"},
+				},
+			})
+		})
+
+		// Security Metrics
+		apiGroup.GET("/metrics/security", func(c *gin.Context) {
+			c.JSON(http.StatusOK, gin.H{
+				"overall_score": 85,
+				"metrics": []gin.H{
+					{"name": "Authentication", "score": 90, "trend": "+5"},
+					{"name": "Authorization", "score": 85, "trend": "+2"},
+					{"name": "Data Encryption", "score": 95, "trend": "0"},
+				},
+			})
+		})
+
+		// Security Alerts
+		apiGroup.GET("/security/alerts", func(c *gin.Context) {
+			c.JSON(http.StatusOK, gin.H{
+				"alerts": []gin.H{
+					{"severity": "Critical", "count": 2},
+					{"severity": "High", "count": 5},
+					{"severity": "Medium", "count": 8},
+					{"severity": "Low", "count": 12},
+				},
+			})
+		})
+
+		// Detailed Alerts
+		apiGroup.GET("/security/alerts/details", func(c *gin.Context) {
+			c.JSON(http.StatusOK, gin.H{
+				"total_alerts": 15,
+				"by_severity": gin.H{
+					"critical": 2,
+					"high":     5,
+					"medium":   8,
+					"low":      12,
+				},
+				"recent": []gin.H{
+					{
+						"id":        "alert-1",
+						"timestamp": time.Now().Add(-10 * time.Minute).Format(time.RFC3339),
+						"category":  "Authentication",
+						"severity":  "high",
+						"message":   "Multiple failed login attempts detected",
+						"status":    "open",
+					},
+				},
+			})
+		})
+
+		// API Categories
+		apiGroup.GET("/inventory/categories", func(c *gin.Context) {
+			c.JSON(http.StatusOK, gin.H{
+				"categories": []gin.H{
+					{"name": "REST", "count": 45},
+					{"name": "GraphQL", "count": 25},
+					{"name": "gRPC", "count": 15},
+					{"name": "WebSocket", "count": 15},
+				},
+			})
+		})
+	}
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * 3600,
+	}))
+
+	// @Summary Get API metrics
+	// @Description Get overall API metrics including security scores and counts
+	// @Tags metrics
+	// @Produce json
+	// @Success 200 {object} map[string]interface{}
+	// @Router /metrics [get]
+	router.GET("/api/metrics", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"total_apis":       150,
+			"secure_apis":      120,
+			"vulnerable_apis":  30,
+			"compliance_score": 85,
+			"api_calls_24h":    25000,
+			"error_rate":       0.02,
+			"alerts":           15,
+			"critical_alerts":  3,
+			"uptime":          99.99,
+			"avg_response_time": 120, // in milliseconds
+			"total_endpoints":  250,
+		})
+	})
+
+	// Performance metrics endpoint
+	router.GET("/api/metrics/performance", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"metrics": []gin.H{
+				{"name": "Response Time", "value": 120, "unit": "ms", "trend": "-5%"},
+				{"name": "Throughput", "value": 1000, "unit": "req/s", "trend": "+10%"},
+				{"name": "Error Rate", "value": 0.02, "unit": "%", "trend": "-1%"},
+				{"name": "CPU Usage", "value": 65, "unit": "%", "trend": "+5%"},
+				{"name": "Memory Usage", "value": 75, "unit": "%", "trend": "+2%"},
+			},
+			"top_endpoints": []gin.H{
+				{"path": "/api/auth", "avg_response_time": 150, "requests_per_min": 100},
+				{"path": "/api/users", "avg_response_time": 80, "requests_per_min": 200},
+				{"path": "/api/orders", "avg_response_time": 200, "requests_per_min": 50},
+			},
+		})
+	})
+
+	// Detailed alerts endpoint
+	router.GET("/api/security/alerts/details", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"total_alerts": 15,
+			"by_severity": gin.H{
+				"critical": 2,
+				"high":     5,
+				"medium":   8,
+				"low":      12,
+			},
+			"by_category": []gin.H{
+				{"category": "Authentication", "count": 5},
+				{"category": "Authorization", "count": 3},
+				{"category": "Input Validation", "count": 4},
+				{"category": "Rate Limiting", "count": 3},
+			},
+			"recent": []gin.H{
+				{
+					"id": "alert-1",
+					"timestamp": time.Now().Add(-10 * time.Minute).Format(time.RFC3339),
+					"category": "Authentication",
+					"severity": "high",
+					"message": "Multiple failed login attempts detected",
+					"source_ip": "203.0.113.1",
+					"status": "open",
+				},
+				{
+					"id": "alert-2",
+					"timestamp": time.Now().Add(-15 * time.Minute).Format(time.RFC3339),
+					"category": "Rate Limiting",
+					"severity": "medium",
+					"message": "API rate limit exceeded",
+					"source_ip": "203.0.113.2",
+					"status": "investigating",
+				},
+			},
+		})
+	})
+
+	// API Health Status endpoint
+	router.GET("/api/health/status", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"overall_status": "healthy",
+			"services": []gin.H{
+				{
+					"name": "Authentication Service",
+					"status": "healthy",
+					"uptime": 99.99,
+					"last_incident": "2025-02-09T10:00:00Z",
+				},
+				{
+					"name": "Payment Service",
+					"status": "degraded",
+					"uptime": 99.95,
+					"last_incident": "2025-02-10T21:00:00Z",
+				},
+				{
+					"name": "Data Analytics Service",
+					"status": "healthy",
+					"uptime": 99.98,
+					"last_incident": "2025-02-08T15:30:00Z",
+				},
+			},
+			"incidents_24h": []gin.H{
+				{
+					"service": "Payment Service",
+					"start_time": "2025-02-10T21:00:00Z",
+					"end_time": "2025-02-10T21:15:00Z",
+					"description": "Increased latency in payment processing",
+					"impact": "minor",
+				},
+			},
+		})
+	})
+
+	router.GET("/api/security/alerts", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"alerts": []gin.H{
+				{"severity": "Critical", "count": 2},
+				{"severity": "High", "count": 5},
+				{"severity": "Medium", "count": 8},
+				{"severity": "Low", "count": 12},
+			},
+		})
+	})
+
+	router.GET("/api/inventory/categories", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"categories": []gin.H{
+				{"name": "REST", "count": 45},
+				{"name": "GraphQL", "count": 25},
+				{"name": "gRPC", "count": 15},
+				{"name": "WebSocket", "count": 15},
+			},
+		})
+	})
+
+	router.GET("/api/inventory", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"apis": []gin.H{
+				{
+					"id": "api-1",
+					"name": "User Authentication API",
+					"version": "v1.0",
+					"type": "REST",
+					"status": "Active",
+					"securityScore": 85,
+					"lastScanned": "2025-02-10T12:00:00Z",
+					"endpoints": 12,
+					"vulnerabilities": 2,
+				},
+				{
+					"id": "api-2",
+					"name": "Payment Processing API",
+					"version": "v2.1",
+					"type": "GraphQL",
+					"status": "Active",
+					"securityScore": 92,
+					"lastScanned": "2025-02-10T11:30:00Z",
+					"endpoints": 8,
+					"vulnerabilities": 0,
+				},
+				{
+					"id": "api-3",
+					"name": "Data Analytics API",
+					"version": "v1.5",
+					"type": "gRPC",
+					"status": "Active",
+					"securityScore": 78,
+					"lastScanned": "2025-02-10T10:45:00Z",
+					"endpoints": 15,
+					"vulnerabilities": 3,
+				},
+			},
+		})
+	})
+
+	router.GET("/api/metrics/security", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"overall_score": 85,
+			"metrics": []gin.H{
+				{"name": "Authentication", "score": 90, "trend": "+5"},
+				{"name": "Authorization", "score": 85, "trend": "+2"},
+				{"name": "Data Encryption", "score": 95, "trend": "0"},
+				{"name": "Input Validation", "score": 80, "trend": "-3"},
+				{"name": "API Gateway Security", "score": 88, "trend": "+4"},
+				{"name": "Rate Limiting", "score": 82, "trend": "+1"},
+			},
+			"recent_events": []gin.H{
+				{"type": "vulnerability_found", "severity": "medium", "timestamp": "2025-02-10T11:20:00Z"},
+				{"type": "security_update", "severity": "info", "timestamp": "2025-02-10T10:15:00Z"},
+				{"type": "attack_blocked", "severity": "high", "timestamp": "2025-02-10T09:45:00Z"},
+			},
+		})
+	})
+
+	router.GET("/api/activity/timeline", func(c *gin.Context) {
+		timeNow := time.Now()
+		data := make([]gin.H, 7)
+		for i := 6; i >= 0; i-- {
+			date := timeNow.AddDate(0, 0, -i)
+			data[6-i] = gin.H{
+				"date":     date.Format("Mon"),
+				"requests": 3500 + (i * 100),
+				"errors":   25 + i,
+			}
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"data": data,
+		})
+	})
+
+	// Start server
+	router.Run(":8080")
+}
