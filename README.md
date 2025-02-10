@@ -1,4 +1,4 @@
-# API Sentinel
+# SentinelX
 
 API Sentinel is a comprehensive dashboard application for monitoring API security, health, and compliance. It provides real-time insights into API performance, security metrics, and post-quantum cryptography readiness.
 
