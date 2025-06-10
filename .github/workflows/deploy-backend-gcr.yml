@@ -1,0 +1,195 @@
+# .github/workflows/deploy-backend-gcr.yml
+
+name: Deploy Backend to Google Cloud Run
+
+on:
+  push:
+    branches:
+      - main # Trigger deployment on pushes to the main branch
+    paths:
+      - 'backend/**' # Only run if changes are in the backend directory
+      - '.github/workflows/deploy-backend-gcr.yml' # Or if the workflow itself changes
+
+env:
+  IMAGE_NAME: api-sentinel-backend # Define a consistent image name
+
+# Permissions required for Workload Identity Federation
+# These allow the GitHub Action to impersonate a Google Cloud Service Account
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy to Cloud Run
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Authenticate to Google Cloud using Workload Identity Federation
+      # This is the recommended way for GitHub Actions to authenticate with GCP.
+      # Requires setup in GCP: Workload Identity Pool, Provider, and Service Account with permissions.
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          # These secrets must be configured in your GitHub repository settings.
+          # GCP_PROJECT_ID: Your Google Cloud Project ID.
+          # GCP_WIF_POOL_ID: The Workload Identity Pool ID.
+          # GCP_WIF_PROVIDER_ID: The Workload Identity Provider ID.
+          # GCP_SERVICE_ACCOUNT_EMAIL: The email of the GCP Service Account to impersonate.
+          # Example values (replace with your actual configuration):
+          # workload_identity_provider: projects/1234567890/locations/global/workloadIdentityPools/my-pool/providers/my-provider
+          # service_account: sa-github-actions@my-project-id.iam.gserviceaccount.com
+          workload_identity_provider: ${{ secrets.GCP_WIF_WORKLOAD_IDENTITY_PROVIDER }} # e.g., projects/PROJECT_ID/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID
+          service_account: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT_EMAIL }}    # e.g., sa-github-actions@PROJECT_ID.iam.gserviceaccount.com
+
+      - name: Set up Google Cloud SDK
+        # Installs and configures the gcloud CLI in the runner environment.
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        # Configures Docker to authenticate with Artifact Registry in the specified region.
+        # GCP_REGION: e.g., 'us-central1'
+        # This secret needs to be set in GitHub repository settings.
+        run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev
+
+      - name: Build Docker image
+        # Builds the Docker image using the Dockerfile in the backend directory.
+        run: docker build -t backend_image ./backend
+        # The tag 'backend_image' is temporary and local to this runner.
+
+      - name: Tag Docker image for Artifact Registry
+        # Tags the locally built image with the full Artifact Registry path and commit SHA + latest.
+        # GCP_PROJECT_ID: Your Google Cloud Project ID.
+        # GCP_REGION: The GCP region where your Artifact Registry is located.
+        # GCP_ARTIFACT_REGISTRY_REPO: The name of your Artifact Registry repository.
+        # These secrets need to be set in GitHub repository settings.
+        run: |
+          IMAGE_PATH="${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_ARTIFACT_REGISTRY_REPO }}/${{ env.IMAGE_NAME }}"
+          docker tag backend_image "$IMAGE_PATH:$GITHUB_SHA"
+          docker tag backend_image "$IMAGE_PATH:latest"
+
+      - name: Push Docker image to Artifact Registry
+        # Pushes the tagged images (commit SHA and latest) to Artifact Registry.
+        run: |
+          IMAGE_PATH="${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_ARTIFACT_REGISTRY_REPO }}/${{ env.IMAGE_NAME }}"
+          docker push "$IMAGE_PATH:$GITHUB_SHA"
+          docker push "$IMAGE_PATH:latest"
+
+      - name: Deploy to Cloud Run
+        # Deploys the image from Artifact Registry to Google Cloud Run.
+        # CLOUD_RUN_SERVICE_NAME: The name of your Cloud Run service.
+        # GCP_REGION: The GCP region where your Cloud Run service is located.
+        # CLOUD_SQL_CONNECTION_NAME: The connection name of your Cloud SQL instance (Project:Region:Instance).
+        # CLOUD_RUN_RUNTIME_SA_EMAIL: The email of the Service Account Cloud Run service will run as.
+        # These secrets need to be set in GitHub repository settings.
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ secrets.CLOUD_RUN_SERVICE_NAME }} # e.g., 'api-sentinel-backend'
+          region: ${{ secrets.GCP_REGION }}             # e.g., 'us-central1'
+          image: "${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_ARTIFACT_REGISTRY_REPO }}/${{ env.IMAGE_NAME }}:$GITHUB_SHA"
+
+          # Environment variables for the Cloud Run service.
+          # GIN_MODE is set to release for production.
+          # Rate limit variables are examples; adjust as needed.
+          # PORT is automatically set by Cloud Run and the app is configured to use it.
+          env_vars: |
+            GIN_MODE=release
+            RATE_LIMIT_RPS=${{ secrets.RATE_LIMIT_RPS || '10' }}
+            RATE_LIMIT_BURST=${{ secrets.RATE_LIMIT_BURST || '5' }}
+            RATE_LIMIT_CLIENT_EXPIRY_MINUTES=${{ secrets.RATE_LIMIT_CLIENT_EXPIRY_MINUTES || '60' }}
+
+          # Secrets to be mounted in Cloud Run from Google Secret Manager.
+          # The Cloud Run runtime Service Account (see 'service_account' below)
+          # needs 'Secret Manager Secret Accessor' role for these secrets.
+          # Format: ENV_VAR_NAME=secret-name:version (e.g., :latest)
+          # These secrets (e.g., 'api-jwt-secret', 'api-db-url') must be created in Google Secret Manager by the user.
+          secrets: |
+            JWT_SECRET_KEY=${{ secrets.CLOUD_RUN_JWT_SECRET_NAME }}:latest
+            DATABASE_URL=${{ secrets.CLOUD_RUN_DATABASE_URL_SECRET_NAME }}:latest
+
+          # Configures Cloud SQL connections for the Cloud Run service.
+          # Note: While this action supports `add_cloudsql_connections`, it's often better to configure
+          # this directly on the Cloud Run service itself via GCP Console or gcloud for persistence.
+          # This parameter ensures the Cloud SQL proxy is available.
+          # CLOUD_SQL_CONNECTION_NAME: e.g., your-gcp-project:your-region:your-instance
+          # This secret needs to be set in GitHub repository settings.
+          # add_cloudsql_connections: ${{ secrets.CLOUD_SQL_CONNECTION_NAME }} # Deprecated, prefer direct service config.
+
+          # The service account the Cloud Run service will run as.
+          # This SA needs permissions to access Cloud SQL, Secret Manager, etc.
+          # CLOUD_RUN_RUNTIME_SA_EMAIL: e.g., cloud-run-runtime@my-project-id.iam.gserviceaccount.com
+          # This secret needs to be set in GitHub repository settings.
+          service_account: ${{ secrets.CLOUD_RUN_RUNTIME_SA_EMAIL }}
+
+          # Optional: If your Cloud SQL instance requires a VPC connector for private IP.
+          # vpc_connector: projects/PROJECT_ID/locations/REGION/connectors/CONNECTOR_NAME
+          # vpc_egress: all-traffic (if using vpc_connector)
+
+        # Note on Cloud SQL Connection:
+        # The `add_cloudsql_connections` parameter in the `deploy-cloudrun` action is a convenience.
+        # The more robust way is to configure the Cloud SQL instance connection directly on the Cloud Run service
+        # (under "Connections" tab when editing the service in GCP Console, or using gcloud).
+        # If configured directly on the service, `add_cloudsql_connections` is not strictly needed here,
+        # but ensure your DATABASE_URL uses the socket format:
+        # `postgres://USER:PASS@/DBNAME?host=/cloudsql/PROJECT:REGION:INSTANCE`
+        # The Cloud Run runtime Service Account (`service_account` above) needs "Cloud SQL Client" role.
+```
+
+I've created the workflow file with extensive comments explaining each step and the required GitHub secrets.
+Key points addressed:
+-   **Trigger**: On push to `main` with path filter for `backend/` and the workflow file itself.
+-   **Environment Variable**: `IMAGE_NAME` is defined in `env` for the job.
+-   **Permissions**: `contents: read` and `id-token: write` are set at the job level for Workload Identity Federation.
+-   **Authentication**: Uses `google-github-actions/auth@v2` with placeholders for WIF secrets.
+-   **Docker Config**: `gcloud auth configure-docker` is used.
+-   **Image Tagging**: Tags with GITHUB_SHA and `latest`.
+-   **Image Pushing**: Pushes both tags.
+-   **Cloud Run Deployment**:
+    -   Uses `google-github-actions/deploy-cloudrun@v2`.
+    -   Specifies `service`, `region`, and `image`.
+    -   Sets `GIN_MODE` and example rate limit env vars (allowing override via secrets or defaulting).
+    -   Uses the `secrets` parameter for `JWT_SECRET_KEY` and `DATABASE_URL`, assuming these are stored in Google Secret Manager. This is the recommended approach.
+    -   Includes `service_account` for the Cloud Run runtime identity.
+    -   Commented out `add_cloudsql_connections` with a note about its deprecation and preference for direct service configuration, but explained how `DATABASE_URL` should be formatted if Cloud SQL proxy is used (which is implicitly set up by the Cloud Run service's SQL connection config).
+
+The user will need to:
+1.  Set up Workload Identity Federation in GCP.
+2.  Create a Service Account for GitHub Actions to impersonate (with roles like Artifact Registry Writer, Cloud Run Developer, Service Account User).
+3.  Create a Service Account for the Cloud Run service to run as (with roles like Cloud SQL Client, Secret Manager Secret Accessor).
+4.  Create an Artifact Registry repository.
+5.  Create secrets in Google Secret Manager for `JWT_SECRET_KEY` and `DATABASE_URL`.
+6.  Configure the necessary GitHub secrets:
+    *   `GCP_PROJECT_ID`
+    *   `GCP_REGION`
+    *   `GCP_WIF_WORKLOAD_IDENTITY_PROVIDER` (full string)
+    *   `GCP_WIF_SERVICE_ACCOUNT_EMAIL`
+    *   `GCP_ARTIFACT_REGISTRY_REPO`
+    *   `CLOUD_RUN_SERVICE_NAME`
+    *   `CLOUD_RUN_RUNTIME_SA_EMAIL`
+    *   `CLOUD_RUN_JWT_SECRET_NAME` (name of the secret in Secret Manager)
+    *   `CLOUD_RUN_DATABASE_URL_SECRET_NAME` (name of the secret in Secret Manager)
+    *   Optional: `RATE_LIMIT_RPS`, `RATE_LIMIT_BURST`, `RATE_LIMIT_CLIENT_EXPIRY_MINUTES` if they want to override defaults via secrets.
+
+This workflow provides a solid foundation for CI/CD for the backend.I have created the GitHub Actions workflow file at `.github/workflows/deploy-backend-gcr.yml`.
+
+The workflow is designed to:
+1.  **Trigger** on pushes to the `main` branch if changes occur in the `backend/` directory or the workflow file itself.
+2.  Define a consistent `IMAGE_NAME` (`api-sentinel-backend`) for the Docker image.
+3.  Set up necessary **permissions** for Workload Identity Federation (`id-token: write`).
+4.  **Authenticate to Google Cloud** using Workload Identity Federation, relying on GitHub secrets for the WIF provider and service account email.
+5.  **Set up Google Cloud SDK** and **configure Docker** to push to Artifact Registry in the specified GCP region.
+6.  **Build the Docker image** from `./backend/Dockerfile`.
+7.  **Tag the Docker image** with the commit SHA and `latest`, using the full Artifact Registry path constructed from GitHub secrets (`GCP_REGION`, `GCP_PROJECT_ID`, `GCP_ARTIFACT_REGISTRY_REPO`) and the `IMAGE_NAME`.
+8.  **Push the Docker image** to Google Artifact Registry.
+9.  **Deploy to Cloud Run** using the `google-github-actions/deploy-cloudrun@v2` action:
+    *   Specifies the Cloud Run `service` name and `region` using GitHub secrets.
+    *   Uses the commit SHA-tagged image from Artifact Registry for deployment.
+    *   Sets environment variables like `GIN_MODE=release` and configurable rate limits (defaulting if secrets are not set).
+    *   Mounts `JWT_SECRET_KEY` and `DATABASE_URL` as secrets from Google Secret Manager, with names configured via GitHub secrets. This is the recommended secure way to handle sensitive data.
+    *   Specifies the `service_account` for the Cloud Run service instance, which needs permissions to access secrets and Cloud SQL.
+    *   Includes extensive comments explaining the purpose of each step and the required GitHub secrets and GCP configurations (Workload Identity Federation, Service Accounts, Artifact Registry, Secret Manager). It also notes that Cloud SQL connections are preferably configured directly on the Cloud Run service.
+
+This workflow provides a robust and secure CI/CD pipeline for the backend application. The user will need to perform a one-time setup in GCP (Workload Identity Federation, Service Accounts, Artifact Registry, Secret Manager secrets) and configure the corresponding secrets in their GitHub repository.

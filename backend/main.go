@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"context"
 	"log"
+	"os" // Added for environment variables
 	"time"
 	// "api-security-dashboard/db" // Assuming db models are in "sentinel/backend/models" or similar
 	"sentinel/backend/handlers"
@@ -146,8 +146,12 @@ func main() {
 	}
 
 	// Start server
-	log.Printf("Server starting on :8080")
-	log.Fatal(router.Run(":8080"))
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080" // Default port if not specified
+	}
+	log.Printf("Server starting on port %s", port)
+	log.Fatal(router.Run(":" + port))
 }
 
 func getMongoURI() string {
