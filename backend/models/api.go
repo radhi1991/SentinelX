@@ -9,14 +9,14 @@ import (
 
 type API struct {
 	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	Name        string            `bson:"name" json:"name"`
-	Version     string            `bson:"version" json:"version"`
-	Type        string            `bson:"type" json:"type"` // REST, GraphQL, gRPC, WebSocket
-	Endpoint    string            `bson:"endpoint" json:"endpoint"`
+	Name        string            `bson:"name" json:"name" binding:"required"`
+	Version     string            `bson:"version" json:"version" binding:"required"`
+	Type        string            `bson:"type" json:"type" binding:"required"` // REST, GraphQL, gRPC, WebSocket
+	Endpoint    string            `bson:"endpoint" json:"endpoint" binding:"required,url"`
 	Description string            `bson:"description" json:"description"`
 	
 	// Security
-	AuthType    string            `bson:"auth_type" json:"authType"` // None, API Key, OAuth2, etc.
+	AuthType    string            `bson:"auth_type" json:"authType" binding:"required"` // None, API Key, OAuth2, etc.
 	SecurityScore float64         `bson:"security_score" json:"securityScore"`
 	
 	// Compliance

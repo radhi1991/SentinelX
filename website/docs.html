@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Documentation - API Sentinel</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Swagger UI CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.17.14/swagger-ui.min.css" />
+    <style>
+        /* Minor style adjustments for Swagger UI if needed */
+        #swagger-ui {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>API Sentinel</h1>
+        <nav>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="features.html">Features</a></li>
+                <li><a href="docs.html">Docs</a></li>
+                <li><a href="contact.html">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <h2>API Reference Documentation</h2>
+        <p>Explore the API endpoints and capabilities of API Sentinel using the interactive Swagger UI below.</p>
+
+        <div id="swagger-ui"></div>
+
+    </main>
+    <footer>
+        <p>&copy; 2024 API Sentinel</p>
+    </footer>
+
+    <!-- Swagger UI JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.17.14/swagger-ui-bundle.js" charset="UTF-8"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.17.14/swagger-ui-standalone-preset.js" charset="UTF-8"></script>
+    <script>
+    window.onload = function() {
+        // Build a system
+        const ui = SwaggerUIBundle({
+            url: "api-docs/swagger.json", // Path to your swagger.json file
+            dom_id: '#swagger-ui',
+            deepLinking: true,
+            presets: [
+                SwaggerUIBundle.presets.apis,
+                SwaggerUIStandalonePreset
+            ],
+            plugins: [
+                SwaggerUIBundle.plugins.DownloadUrl
+            ],
+            layout: "StandaloneLayout"
+        });
+        window.ui = ui;
+    };
+    </script>
+</body>
+</html>
