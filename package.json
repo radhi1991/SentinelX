@@ -18,7 +18,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "docs:update-api": "cd backend && export PATH=$PATH:$(go env GOPATH)/bin && swag init -g main.go -o ./docs && cd .. && cp backend/docs/swagger.json website/api-docs/swagger.json"
   },
   "eslintConfig": {
     "extends": [

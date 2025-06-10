@@ -1,12 +1,7 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "API for monitoring and managing API security metrics",
-        "title": "API Security Dashboard API",
-        "contact": {},
-        "version": "1.0"
+        "contact": {}
     },
-    "host": "localhost:8080",
-    "basePath": "/api",
     "paths": {}
 }

@@ -1,0 +1,133 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    color: #333;
+    line-height: 1.6;
+}
+
+header {
+    background-color: #333;
+    color: #fff;
+    padding: 1rem 0;
+    text-align: center;
+}
+
+header h1 {
+    margin: 0;
+    padding-bottom: 0.5rem; /* Add some space below heading */
+}
+
+/* Navigation Menu Styling */
+nav ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    text-align: center;
+}
+
+nav ul li {
+    display: inline;
+    margin-right: 20px;
+}
+
+nav ul li:last-child {
+    margin-right: 0;
+}
+
+nav ul li a {
+    color: #fff;
+    text-decoration: none;
+    font-size: 1.1rem;
+}
+
+nav ul li a:hover {
+    text-decoration: underline;
+}
+
+main {
+    padding: 1rem;
+    padding-bottom: 80px; /* Increased padding for footer */
+    text-align: left; /* Align text to left for sections */
+    max-width: 960px; /* Max width for main content */
+    margin: 0 auto; /* Center main content */
+}
+
+main h2, main h3 {
+    text-align: center; /* Center headings */
+}
+
+section {
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Features Page Specific Styling */
+.feature-section ul {
+    list-style-type: none; /* Remove default bullets */
+    padding-left: 0;
+}
+
+.feature-section ul li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+.feature-section ul li:last-child {
+    border-bottom: none;
+}
+
+/* Contact Page Specific Styling */
+#contact-methods .contact-option {
+    margin-bottom: 1.5rem;
+}
+
+#contact-methods .contact-option h3 {
+    margin-top: 0;
+    color: #333;
+}
+
+footer {
+    text-align: center;
+    padding: 1rem 0;
+    background-color: #333;
+    color: #fff;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    header h1 {
+        font-size: 1.8rem;
+    }
+
+    nav ul li {
+        display: block; /* Stack navigation items */
+        margin: 0.5rem 0;
+    }
+
+    nav ul li a {
+        font-size: 1rem;
+    }
+
+    main {
+        padding: 0.5rem;
+        padding-bottom: 70px; /* Adjust for footer */
+    }
+}
+
+@media (max-width: 480px) {
+    header h1 {
+        font-size: 1.5rem;
+    }
+
+    body {
+        font-size: 0.9rem;
+    }
+}

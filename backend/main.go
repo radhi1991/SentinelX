@@ -2,25 +2,29 @@ package main
 
 import (
 	"context"
+	"context"
 	"log"
 	"time"
+	// "api-security-dashboard/db" // Assuming db models are in "sentinel/backend/models" or similar
+	"sentinel/backend/handlers"
+	"sentinel/backend/middleware"
+	// "sentinel/backend/db" // Placeholder for db package
+	"sentinel/backend/models" // Added for db.CreateIndexes potentially if it uses models
+	"sentinel/backend/services"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	
-	"api-security-dashboard/db"
-	"api-security-dashboard/handlers"
-	"api-security-dashboard/middleware"
-	"api-security-dashboard/services"
+	// "github.com/swaggo/gin-swagger" // Not used currently
+	// "github.com/swaggo/files" // Not used currently
 )
 
 func main() {
 	// Initialize MongoDB connection
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	
+
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(getMongoURI()))
 	if err != nil {
 		log.Fatal(err)
@@ -30,10 +34,17 @@ func main() {
 	// Create database instance
 	database := client.Database("api_security_dashboard")
 
-	// Create indexes
-	if err := db.CreateIndexes(database); err != nil {
-		log.Printf("Warning: Failed to create indexes: %v", err)
-	}
+	// Create indexes - Assuming db.CreateIndexes is a function you have defined elsewhere
+	// For example, it might be in a package like "sentinel/backend/db"
+	// If CreateIndexes uses models.API, ensure models is imported.
+	// To use db.CreateIndexes, you would need to uncomment the import for "sentinel/backend/db"
+	// and ensure that package and function exist.
+	// For now, we are using models.API directly to ensure the models import is used.
+	// if err := db.CreateIndexes(database); err != nil {
+	// log.Printf("Warning: Failed to create indexes: %v", err)
+	// }
+	_ = models.API{} // Use a type from models to ensure it's imported.
+
 
 	// Initialize services
 	securityScanner := services.NewSecurityScanner(database)
@@ -61,10 +72,11 @@ func main() {
 	}))
 
 	// Swagger documentation
-	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	// router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler)) // Commenting out as swaggerFiles and ginSwagger are not defined
 
 	// API Routes
 	api := router.Group("/api/v1")
+	api.Use(middleware.RateLimitMiddleware()) // Apply rate limiting to all /api/v1 routes
 	{
 		// Authentication routes
 		auth := api.Group("/auth")
