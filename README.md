@@ -146,11 +146,68 @@ This section guides you through setting up API Sentinel for development and depl
         go build -o api-sentinel
         ./api-sentinel
         ```
-    The backend server will start on port `8080` by default.
+    The backend server will start on port `8080` by default (or as specified by the `PORT` environment variable).
+
+## Deployment
+
+This section provides guidance on deploying the API Sentinel application components.
+
+### Backend: Google Cloud Run
+
+Deploying the Go backend to Google Cloud Run offers a scalable and serverless environment.
+
+#### Prerequisites
+Before deploying to Google Cloud Run, ensure you have:
+1.  **Google Cloud SDK**: Installed and initialized (`gcloud init`).
+2.  **GCP Project**: A Google Cloud Platform project created with billing enabled.
+3.  **Required APIs Enabled**: In your GCP project, enable the following APIs:
+    -   Cloud Run API (`run.googleapis.com`)
+    -   Artifact Registry API (`artifactregistry.googleapis.com`) (if storing Docker images there)
+    -   Cloud SQL Admin API (`sqladmin.googleapis.com`) (if using Cloud SQL)
+
+#### Database Setup (Cloud SQL for PostgreSQL)
+For a production environment, a managed PostgreSQL database like Cloud SQL is recommended.
+1.  **Create Instance**: In the GCP Console, create a new Cloud SQL for PostgreSQL instance.
+2.  **Create Database & User**: Within your Cloud SQL instance, create a database (e.g., `api_sentinel_db`) and a user (e.g., `api_sentinel_user`) with a strong password. This user will be used by the API Sentinel backend to connect to the database.
+3.  **Note Connection Name**: Record the **Instance connection name** (e.g., `your-gcp-project:your-region:your-instance-name`). This is crucial for connecting Cloud Run to Cloud SQL.
+
+#### Environment Variables on Cloud Run
+Configure the following environment variables in your Cloud Run service settings. For sensitive values, it is **strongly recommended** to use Google Secret Manager and link them as secrets to your Cloud Run service.
+-   `PORT`: Automatically set by Cloud Run. Your application is configured to use this.
+-   `GIN_MODE`: Set to `release` for production performance.
+-   `JWT_SECRET_KEY`: A strong, unique secret key for signing JWTs. (Store in Secret Manager).
+-   `DATABASE_URL`: The connection string for your PostgreSQL database.
+    -   When using Cloud SQL with a private IP and the Cloud SQL Go Connector (which is implicitly used by many Go SQL drivers if configured correctly, or by connecting via the Cloud SQL Auth Proxy sidecar pattern), the typical format is:
+        `postgres://<DB_USER>:<DB_PASSWORD>@/<DB_NAME>?host=/cloudsql/<INSTANCE_CONNECTION_NAME>`
+        Example: `postgres://api_sentinel_user:yourpassword@/api_sentinel_db?host=/cloudsql/your-project:region:instance-name` (Store password or full URL in Secret Manager).
+    -   Alternatively, if connecting via public IP (ensure SSL is enforced and IP is firewalled) or other methods, adjust accordingly.
+-   `RATE_LIMIT_RPS` (Optional): Requests per second for rate limiting (e.g., `10`).
+-   `RATE_LIMIT_BURST` (Optional): Burst allowance for rate limiting (e.g., `5`).
+-   `RATE_LIMIT_CLIENT_EXPIRY_MINUTES` (Optional): Client expiry for rate limiting (e.g., `5`).
+
+#### Deployment Methods
+-   **Manual Deployment (Console/gcloud)**:
+    -   You can manually deploy your first version via the GCP Console: Create a new Cloud Run service, select your region, configure service settings (name, authentication, etc.), and specify the container image to deploy (e.g., `gcr.io/YOUR_PROJECT_ID/api-sentinel-backend:latest` after building and pushing it).
+    -   Alternatively, use `gcloud run deploy` commands from your local machine where the Docker image has been built and pushed to Artifact Registry or Google Container Registry.
+        ```bash
+        # Example: Deploying a previously built and pushed image
+        gcloud run deploy api-sentinel-backend \
+          --image gcr.io/YOUR_PROJECT_ID/api-sentinel-backend:latest \
+          --platform managed \
+          --region YOUR_REGION \
+          --allow-unauthenticated \ # Or configure authentication as needed
+          --set-env-vars="GIN_MODE=release" \
+          --set-secrets="JWT_SECRET_KEY=your-jwt-secret-key-name:latest,DATABASE_URL=your-db-url-secret-name:latest"
+        ```
+-   **Automated Deployment (GitHub Actions)**:
+    A GitHub Actions workflow (e.g., `.github/workflows/deploy-backend.yml`, to be created) can automate the process of building the Docker image, pushing it to Artifact Registry, and deploying it to Cloud Run on pushes to the `main` branch.
+
+### Frontend: GitHub Pages
+The frontend React application is configured for deployment to GitHub Pages. Refer to the GitHub Actions workflow at `.github/workflows/deploy-frontend.yml` and the `deploy` scripts in `package.json`.
 
 ## API Documentation (Endpoints)
 
-The API Sentinel backend exposes several endpoints for managing and monitoring APIs. For a detailed and interactive API specification, please refer to the [Swagger documentation hosted on our website](website/docs.html) (once the website is deployed) or by running the application and accessing the generated `swagger.json`.
+The API Sentinel backend exposes several endpoints for managing and monitoring APIs. For a detailed and interactive API specification, please refer to the [Swagger documentation hosted on our website](https://radhi1991.github.io/API-Sentinel/docs.html) (once the website is deployed and updated) or by running the application and accessing the generated `swagger.json`.
 
 Key endpoint groups include:
 -   `/auth`: Authentication (login, register).

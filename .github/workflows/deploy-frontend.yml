@@ -1,0 +1,63 @@
+name: Deploy Frontend to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main # Or your default branch if different
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18' # Specify LTS version, adjust if project has specific needs
+          cache: 'npm' # Cache npm dependencies
+
+      - name: Install dependencies
+        run: npm ci # Use 'ci' for cleaner, faster installs in CI
+
+      - name: Build frontend
+        run: npm run build
+        # Add environment variables here if your build process needs them
+        # env:
+        #   REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL }} # Example
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './build' # Ensure this is your build output folder
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        # This action does not require github_token or publish_dir for user/org pages
+        # if deploying to a project page (e.g., username.github.io/repo-name),
+        # ensure your `homepage` field in package.json is set correctly.
+        # The peaceiris/actions-gh-pages action is an alternative if you prefer a different deployment method.
+        # For this setup, we are using the official GitHub Actions for Pages.
+```
+
+**Note:** I've used the newer official GitHub Actions for deploying to GitHub Pages (`actions/configure-pages@v5`, `actions/upload-pages-artifact@v3`, `actions/deploy-pages@v4`). This is generally the recommended approach now over `peaceiris/actions-gh-pages` for most straightforward GitHub Pages deployments, especially when not dealing with complex scenarios like cross-repository deployments or custom commit messages for the gh-pages branch. This method also integrates better with the `environment` configuration for GitHub Pages.
+
+The `peaceiris/actions-gh-pages` action is still excellent and valid if more customization over the deployment commit or branch is needed. If the official actions don't suit your specific needs, we can switch back to `peaceiris/actions-gh-pages`. For now, I've opted for the current GitHub best practice.
+
+The `publish_dir` for `peaceiris/actions-gh-pages` corresponds to the `path` in `actions/upload-pages-artifact`.
+The `github_token` is automatically available to `actions/deploy-pages`.
+I've also added the `environment` key to the job, which is good practice for GitHub Pages deployments.

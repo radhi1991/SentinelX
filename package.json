@@ -2,6 +2,7 @@
   "name": "api-security-dashboard",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://radhi1991.github.io/API-Sentinel/",
   "dependencies": {
     "@emotion/react": "^11.11.0",
     "@emotion/styled": "^11.11.0",
@@ -11,14 +12,16 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.11.2",
-    "recharts": "^2.6.2",
-    "react-scripts": "5.0.1"
+    "react-scripts": "5.0.1",
+    "recharts": "^2.6.2"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build",
     "docs:update-api": "cd backend && export PATH=$PATH:$(go env GOPATH)/bin && swag init -g main.go -o ./docs && cd .. && cp backend/docs/swagger.json website/api-docs/swagger.json"
   },
   "eslintConfig": {
@@ -38,5 +41,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "gh-pages": "^6.3.0"
   }
 }
